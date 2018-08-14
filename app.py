@@ -1,8 +1,7 @@
-#-*- coding:utf-8 -*-
+# -*- coding:utf-8 -*-
 
-import bottle
-from bottle import run, template, request, response, redirect
-from bottle import route, get, post, static_file, HTTPError
+from bottle import run, template
+from bottle import route, get, static_file, HTTPError
 from bottle import HTTPResponse
 import zipfile
 import base64
@@ -11,20 +10,21 @@ from PIL import Image
 import io
 import math
 from urllib import parse
-from urllib.parse import quote, unquote
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CSS_DIR  = os.path.join(BASE_DIR, 'static/css')
-IMG_DIR  = os.path.join(BASE_DIR, 'static/img')
+CSS_DIR = os.path.join(BASE_DIR, 'static/css')
+IMG_DIR = os.path.join(BASE_DIR, 'static/img')
 BOOK_DIR = os.path.join(BASE_DIR, 'debug/book')
-TMB_DIR  = os.path.join(BASE_DIR, 'debug/TMB')
+TMB_DIR = os.path.join(BASE_DIR, 'debug/TMB')
 NUM_OF_TMB = 40
-TABLE_LEN  = 9
+TABLE_LEN = 9
+
 
 @get('/')
 def index():
     files, dirs, videos = dirlist(BOOK_DIR)
-    return template('index', files = files, dirs = dirs, videos = videos)
+    return template('index', files=files, dirs=dirs, videos=videos)
+
 
 @get('/ls/<path:path>')
 def ls(path):
@@ -32,56 +32,57 @@ def ls(path):
     try:
         directory = joinpath('/', path)
         files, dirs, videos = dirlist(directory)
-        return template('index', files = files, dirs = dirs, videos = videos)
+        return template('index', files=files, dirs=dirs, videos=videos)
     except FileNotFoundError:
         return HTTPError(404, "{0} is Not Found".format(path))
 
+
 def dirlist(path):
-    #上位ディレクトリのパスを登録しておく
-    dirs   = {".." : os.path.dirname(path)}
-    files  = {}
+    # 上位ディレクトリのパスを登録しておく
+    dirs = {"..": os.path.dirname(path)}
+    files = {}
     videos = {}
     for name in os.listdir(path):
         root, ext = os.path.splitext(name)
         bpath = joinpath(path, name)
         bpath = parse.quote(bpath)
 
-        if   ext == '':
-            dirs.update({name : bpath})
+        if ext == '':
+            dirs.update({name: bpath})
         elif ext == '.zip':
-            files.update({name : bpath})
+            files.update({name: bpath})
         elif ext == '.mp4':
-            videos.update({name : bpath})
+            videos.update({name: bpath})
 
     return files, dirs, videos
 
 
 @get('/list/<path:path>/<p:int>')
-def thumbnails(path,p):
+def thumbnails(path, p):
     path = parse.unquote(path)
-    src  = joinpath('/', path)
+    src = joinpath('/', path)
     try:
-        ext   = Extractor(src)
-        lst   = index_list(p,len(ext.get_filelist()))
-        page  = int(math.ceil(ziplen(src) / NUM_OF_TMB))
+        ext = Extractor(src)
+        lst = index_list(p, len(ext.get_filelist()))
+        page = int(math.ceil(ziplen(src) / NUM_OF_TMB))
         table = create_table(p, page, TABLE_LEN)
-        path  = parse.quote(src)
-        base  = parse.quote(os.path.dirname(src))
-        return template('list', name = path, index = lst , table = table,
-                p = p , base = base)
+        path = parse.quote(src)
+        base = parse.quote(os.path.dirname(src))
+        return template('list', name=path, index=lst, table=table,
+                        p=p, base=base)
     except FileNotFoundError:
         return HTTPError(404, "{0} is Not Found".format(path))
 
 
 @get('/view/<path:path>/<index:int>')
 def view(path, index):
-    path   = parse.unquote(path)
-    src    = joinpath('/', path)
+    path = parse.unquote(path)
+    src = joinpath('/', path)
     try:
-        ext    = Extractor(src)
-        ifile  = ext.img_ext(index)
+        ext = Extractor(src)
+        ifile = ext.img_ext(index)
         mvdict = move_dict(src, index, len(ext.get_filelist()))
-        return template('main', mvdict = mvdict, img = ifile)
+        return template('main', mvdict=mvdict, img=ifile)
     except FileNotFoundError:
         return HTTPError(404, "{0} is Not Found".format(path))
     except IndexError:
@@ -93,14 +94,15 @@ def video(path):
     path = parse.unquote(path)
     path = joinpath('/', path)
     name = path.replace(BOOK_DIR, '')
-    return template('video', name = name)
+    return template('video', name=name)
+
 
 def move_dict(path, index, limit):
-    mvdict = {"back" : sub1(index),
-            "next" : add1(index, sub1(limit)),
-            "pagetop" : page_top(path, index)
-            }
+    mvdict = {"back": sub1(index),
+              "next": add1(index, sub1(limit)),
+              "pagetop": page_top(path, index)}
     return mvdict
+
 
 def sub1(n):
     if n <= 0:
@@ -108,23 +110,27 @@ def sub1(n):
     else:
         return n - 1
 
+
 def add1(n, limit):
     if n >= limit:
         return limit
     else:
         return n + 1
 
+
 def page_top(path, index):
     path = parse.quote(path)
     page = str(int(index / NUM_OF_TMB) + 1)
     return "/list/{0}/{1}".format(path, page)
 
+
 def ziplen(src):
     with zipfile.ZipFile(src, 'r') as zfile:
         return len(zfile.namelist())
 
+
 def joinpath(path1, path2):
-    return os.path.join(path1,path2)
+    return os.path.join(path1, path2)
 
 
 def create_table(index, index_len, table_len):
@@ -142,18 +148,19 @@ def create_table(index, index_len, table_len):
         table.append(index_len)
         return table
     if index >= index_len - harf_len:
-        table = list( range( (index_len - (harf_len * 2)), (index_len + 1) ))
+        table = list(range((index_len - (harf_len * 2)), (index_len + 1)))
         table.insert(0, 1)
         table.insert(1, "...")
         return table
     if med_of_table < index < index_len - harf_len:
-        table = list( range( (index - harf_len), (index + harf_len + 1) ))
+        table = list(range((index - harf_len), (index + harf_len + 1)))
         table.insert(0, 1)
         table.insert(1, "...")
         table.append("...")
         table.append(index_len)
         return table
     return
+
 
 def index_list(p, limit):
     start = (p-1) * NUM_OF_TMB
@@ -163,17 +170,20 @@ def index_list(p, limit):
     lst = list(range(start, stop))
     return lst
 
+
 class Extractor:
     def __init__(self, src):
-        self._src   = src
+        self._src = src
         self._zfile = zipfile.ZipFile(src, 'r')
-        #self._files = list(filter(self._remove,self._zfile.namelist()))
-        self._files = [item for item in self._zfile.namelist() if self._remove(item)]
+        self._files = [
+                item
+                for item in self._zfile.namelist()
+                if self._remove(item)]
         self._files.sort()
 
     def img_ext(self, index):
         name = self._files[index]
-        img  = self._zfile.read(name)
+        img = self._zfile.read(name)
         return self._add_scheme(img)
 
     def close(self):
@@ -205,7 +215,7 @@ class Extractor:
         if img.mode != 'RGB':
             img = img.convert('RGB')
         jpg_img_buf = io.BytesIO()
-        img.thumbnail((150,150), Image.ANTIALIAS)
+        img.thumbnail((150, 150), Image.ANTIALIAS)
         img.save(jpg_img_buf, format='JPEG')
         return jpg_img_buf.getvalue()
 
@@ -214,52 +224,59 @@ class Extractor:
 def recoad_static(filename):
     return static_file(filename, root=CSS_DIR)
 
+
 @route('/img/<filename>')
 def recoad_static(filename):
     return static_file(filename, root=IMG_DIR)
+
 
 @route('/tmb/<filename>')
 def recoad_static(filename):
     return static_file(filename, root=TMB_DIR)
 
+
 @route('/tmb/<path:path>/<i:int>')
 def return_tmb(path, i):
     path = parse.unquote(path)
-    src  = joinpath('/', path)
-    ext  = Extractor(src)
-    book     = get_bookname(path)
+    src = joinpath('/', path)
+    ext = Extractor(src)
+    book = get_bookname(path)
     bookpath = cleate_tmb_path(book)
-    tmbname  = ext.get_filename(i)
-    tmbpath  = os.path.join(bookpath, tmbname)
+    tmbname = ext.get_filename(i)
+    tmbpath = os.path.join(bookpath, tmbname)
 
     if(not os.path.isdir(bookpath)):
         os.mkdir(bookpath)
     if(not os.path.isfile(tmbpath)):
-        img  = ext.get_tmb(i)
+        img = ext.get_tmb(i)
         save_tmb(img, tmbpath)
     else:
-        img  = get_tmb(tmbpath)
+        img = get_tmb(tmbpath)
 
-    ret  = HTTPResponse(status=200, body = img)
+    ret = HTTPResponse(status=200, body=img)
     ret.set_header('Content-Type', 'image/jpeg')
     return ret
+
 
 def save_tmb(tmb, path):
     with open(path, "wb") as fout:
         fout.write(tmb)
         fout.flush
 
+
 def cleate_tmb_path(name):
     return os.path.join(TMB_DIR, os.path.basename(name))
+
 
 def get_bookname(path):
     name, ext = os.path.splitext(os.path.basename(path))
     return name
 
+
 def get_tmb(path):
     with open(path, "rb") as fin:
-        return fin.read();
+        return fin.read()
+
 
 if __name__ == '__main__':
-    run(host='localhost', port=8080, debug=True, reloader = True)
-
+    run(host='localhost', port=8080, debug=True, reloader=True)
