@@ -126,13 +126,6 @@ header{
     max-height: 169px;
 }
 
-.video video{
-    display: block;
-    margin:0 auto;
-    width: 716px;
-    height: 404px;
-}
-
 .list_outer{
 	float:left;
 	width: 120px;

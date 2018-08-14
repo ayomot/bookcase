@@ -22,8 +22,8 @@ TABLE_LEN = 9
 
 @get('/')
 def index():
-    files, dirs, videos = dirlist(BOOK_DIR)
-    return template('index', files=files, dirs=dirs, videos=videos)
+    files, dirs = dirlist(BOOK_DIR)
+    return template('index', files=files, dirs=dirs)
 
 
 @get('/ls/<path:path>')
@@ -31,8 +31,8 @@ def ls(path):
     path = parse.unquote(path)
     try:
         directory = joinpath('/', path)
-        files, dirs, videos = dirlist(directory)
-        return template('index', files=files, dirs=dirs, videos=videos)
+        files, dirs = dirlist(directory)
+        return template('index', files=files, dirs=dirs)
     except FileNotFoundError:
         return HTTPError(404, "{0} is Not Found".format(path))
 
@@ -41,7 +41,6 @@ def dirlist(path):
     # 上位ディレクトリのパスを登録しておく
     dirs = {"..": os.path.dirname(path)}
     files = {}
-    videos = {}
     for name in os.listdir(path):
         root, ext = os.path.splitext(name)
         bpath = joinpath(path, name)
@@ -51,10 +50,8 @@ def dirlist(path):
             dirs.update({name: bpath})
         elif ext == '.zip':
             files.update({name: bpath})
-        elif ext == '.mp4':
-            videos.update({name: bpath})
 
-    return files, dirs, videos
+    return files, dirs
 
 
 @get('/list/<path:path>/<p:int>')
@@ -87,14 +84,6 @@ def view(path, index):
         return HTTPError(404, "{0} is Not Found".format(path))
     except IndexError:
         return HTTPError(500, "Index Is Out Of Range")
-
-
-@get('/video/<path:path>')
-def video(path):
-    path = parse.unquote(path)
-    path = joinpath('/', path)
-    name = path.replace(BOOK_DIR, '')
-    return template('video', name=name)
 
 
 def move_dict(path, index, limit):

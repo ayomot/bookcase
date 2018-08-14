@@ -32,11 +32,6 @@
                 % end
             </div>
 
-            <div class="videos">
-                % for name, path in sorted(videos.items()):
-                <p><a href="/video/{{path}}">{{name}}</a></p>
-                % end
-            </div>
         </div>
 
     </body>
