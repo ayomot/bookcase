@@ -1,4 +1,4 @@
-% rebase("layout.tpl", title="一覧")
+% rebase("layout.tpl", title="書籍一覧")
 <div class="items">
 
 	<div class="directory">

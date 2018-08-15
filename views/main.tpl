@@ -1,4 +1,4 @@
-% rebase("layout.tpl", title="一覧")
+% rebase("layout.tpl", title="画像")
 <div class="show-image">
 	<a href = {{mvdict["next"]}}><img src={{!img}} class="ex-image"></a>
 </div>

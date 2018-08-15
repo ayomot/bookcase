@@ -1,4 +1,4 @@
-% rebase("layout.tpl", title="一覧")
+% rebase("layout.tpl", title="ページ一覧")
 <div class="thumbnails">
 % for i in index:
 	<div class="tmb_outer">
