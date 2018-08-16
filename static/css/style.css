@@ -125,3 +125,13 @@ header a{
 	max-width: 120px;
 	max-height: 169px;
 }
+
+.directorys {
+	display: table;
+	float: none;
+}
+
+.books {
+	display: table;
+	float: none;
+}

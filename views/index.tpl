@@ -1,9 +1,14 @@
 % rebase("layout.tpl", title="書籍一覧")
 <div class="items">
 
-	<div class="directory">
+	<div class="directorys">
 		% for name, path in sorted(dirs.items()):
-		<p><a href="/ls/{{path}}">{{name}}</a></p>
+		<div class="list_outer">
+			<a href="/ls/{{path}}">
+			<img src="/img/directory.png">
+			<p>{{name}}</p>
+			</a>
+		</div>
 		% end
 	</div>
 
@@ -14,7 +19,7 @@
 				 <img src="/tmb/{{path}}/0">
 				 <p>{{name}}</p>
 				 </a>
-			 </div>
+			</div>
 		% end
 	</div>
 
