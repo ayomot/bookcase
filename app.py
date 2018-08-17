@@ -1,5 +1,6 @@
 # -*- coding:utf-8 -*-
 
+import bottle
 from bottle import run, template
 from bottle import route, get, static_file, HTTPError
 from bottle import HTTPResponse
@@ -14,15 +15,16 @@ from urllib import parse
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CSS_DIR = os.path.join(BASE_DIR, 'static/css')
 IMG_DIR = os.path.join(BASE_DIR, 'static/img')
-BOOK_DIR = os.path.join(BASE_DIR, 'debug/book')
-TMB_DIR = os.path.join(BASE_DIR, 'debug/TMB')
+DEFAULT_BOOK_DIR = os.path.join(BASE_DIR, 'debug/book')
+DEFAULT_TMB_DIR = os.path.join(BASE_DIR, 'debug/TMB')
 NUM_OF_TMB = 40
 TABLE_LEN = 9
+app = bottle.default_app()
 
 
 @get('/')
 def index():
-    files, dirs = dirlist(BOOK_DIR)
+    files, dirs = dirlist(app.config['app.book_root'])
     return template('index', files=files, dirs=dirs)
 
 
@@ -221,7 +223,7 @@ def recoad_static(filename):
 
 @route('/tmb/<filename>')
 def recoad_static(filename):
-    return static_file(filename, root=TMB_DIR)
+    return static_file(filename, root=app.config['app.tmb_root'])
 
 
 @route('/tmb/<path:path>/<i:int>')
@@ -254,7 +256,7 @@ def save_tmb(tmb, path):
 
 
 def cleate_tmb_path(name):
-    return os.path.join(TMB_DIR, os.path.basename(name))
+    return os.path.join(app.config['app.tmb_root'], os.path.basename(name))
 
 
 def get_bookname(path):
@@ -267,5 +269,17 @@ def get_tmb(path):
         return fin.read()
 
 
+def init_config():
+    """ configの初期設定を行う
+    """
+    app.config.load_config("app.conf")
+
+    # デバッグ設定の場合は、configを上書き
+    if app.config['app.debug']:
+        app.config['app.book_root'] = DEFAULT_BOOK_DIR
+        app.config['app.tmb_root'] = DEFAULT_TMB_DIR
+
+
 if __name__ == '__main__':
-    run(host='localhost', port=8080, debug=True, reloader=True)
+    init_config()
+    run(app, host='localhost', port=8080, debug=True, reloader=True)
