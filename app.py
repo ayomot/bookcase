@@ -20,6 +20,7 @@ DEFAULT_BOOK_DIR = os.path.join(BASE_DIR, 'debug/book')
 DEFAULT_TMB_DIR = os.path.join(BASE_DIR, 'debug/TMB')
 NUM_OF_TMB = 40
 TABLE_LEN = 9
+SPLIT_LEN = TABLE_LEN - 4
 app = bottle.default_app()
 
 
@@ -65,7 +66,7 @@ def thumbnails(path, p):
         with closing(Extractor(src)) as ext:
             lst = index_list(p, len(ext.get_filelist()))
         page = int(math.ceil(ziplen(src) / NUM_OF_TMB))
-        table = create_table(p, page, TABLE_LEN)
+        table = create_table(p, page)
         path = parse.quote(src)
         base = parse.quote(os.path.dirname(src))
         return template('list', name=path, index=lst, table=table,
@@ -125,33 +126,45 @@ def joinpath(path1, path2):
     return os.path.join(path1, path2)
 
 
-def create_table(index, index_len, table_len):
-    med_of_table = int(math.ceil(table_len / 2))
-    harf_len = int(table_len / 2)
+def create_table(index, last_page):
+    """
+    ページ移動用のテーブルを作成する
+    総ページ数がテーブルに収まらない場合、
+    現在のページ数を中央に配置し、先頭と末尾に先頭・末尾のNo.を付加する。
+    例: ["1", "...", "3", "4", "5", "...", "N"]
 
-    if index <= 0:
-        pass
-    if index_len <= table_len:
-        table = list(range(1, (index_len + 1)))
-        return table
-    if index <= med_of_table:
-        table = list(range(1, (table_len + 1)))
-        table.append("...")
-        table.append(index_len)
-        return table
-    if index >= index_len - harf_len:
-        table = list(range((index_len - (harf_len * 2)), (index_len + 1)))
-        table.insert(0, 1)
-        table.insert(1, "...")
-        return table
-    if med_of_table < index < index_len - harf_len:
-        table = list(range((index - harf_len), (index + harf_len + 1)))
-        table.insert(0, 1)
-        table.insert(1, "...")
-        table.append("...")
-        table.append(index_len)
-        return table
-    return
+    Parameters
+    ----------
+    index : int
+        現在のページNo.
+    last_page : int
+        最後尾のページNo.
+    """
+    start = 1
+    end = last_page
+
+    # ページ数がテーブルに収まらない場合は、テーブルを分割
+    if TABLE_LEN < last_page:
+        if index <= SPLIT_LEN:
+            end = TABLE_LEN
+        elif SPLIT_LEN < index < (last_page - SPLIT_LEN):
+            start = index - (TABLE_LEN // 2)
+            end = index + (TABLE_LEN // 2)
+        else:
+            start = last_page - TABLE_LEN + 1
+            end = last_page
+
+    # テーブル生成
+    table = [str(i) for i in range(start, end + 1)]
+
+    # テーブルを分割する場合、先頭ページと最終ページを追加
+    if TABLE_LEN < last_page:
+        if SPLIT_LEN < index:
+            table[:2] = ["1", "..."]
+        if index <= (last_page - SPLIT_LEN):
+            table[-2:] = ["...", str(last_page)]
+
+    return table
 
 
 def index_list(p, limit):

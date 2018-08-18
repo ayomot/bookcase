@@ -15,9 +15,7 @@
 			<tr>
 			% for i in list(table):
 
-				% if i == p:
-					<td>{{i}}</td>
-				% elif i == "...":
+				% if i == str(p) or i == "...":
 					<td>{{i}}</td>
 				% else:
 					<td><a href="/list/{{name}}/{{i}}">{{i}}</a></td>
