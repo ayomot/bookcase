@@ -11,6 +11,7 @@ from PIL import Image
 import io
 import math
 from urllib import parse
+from contextlib import closing
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CSS_DIR = os.path.join(BASE_DIR, 'static/css')
@@ -61,8 +62,8 @@ def thumbnails(path, p):
     path = parse.unquote(path)
     src = joinpath('/', path)
     try:
-        ext = Extractor(src)
-        lst = index_list(p, len(ext.get_filelist()))
+        with closing(Extractor(src)) as ext:
+            lst = index_list(p, len(ext.get_filelist()))
         page = int(math.ceil(ziplen(src) / NUM_OF_TMB))
         table = create_table(p, page, TABLE_LEN)
         path = parse.quote(src)
@@ -78,9 +79,9 @@ def view(path, index):
     path = parse.unquote(path)
     src = joinpath('/', path)
     try:
-        ext = Extractor(src)
-        ifile = ext.img_ext(index)
-        mvdict = move_dict(src, index, len(ext.get_filelist()))
+        with closing(Extractor(src)) as ext:
+            ifile = ext.img_ext(index)
+            mvdict = move_dict(src, index, len(ext.get_filelist()))
         return template('main', mvdict=mvdict, img=ifile)
     except FileNotFoundError:
         return HTTPError(404, "{0} is Not Found".format(path))
@@ -230,19 +231,19 @@ def recoad_static(filename):
 def return_tmb(path, i):
     path = parse.unquote(path)
     src = joinpath('/', path)
-    ext = Extractor(src)
-    book = get_bookname(path)
-    bookpath = cleate_tmb_path(book)
-    tmbname = ext.get_filename(i)
-    tmbpath = os.path.join(bookpath, tmbname)
+    with closing(Extractor(src)) as ext:
+        book = get_bookname(path)
+        bookpath = create_tmb_path(book)
+        tmbname = ext.get_filename(i)
+        tmbpath = os.path.join(bookpath, tmbname)
 
-    if(not os.path.isdir(bookpath)):
-        os.mkdir(bookpath)
-    if(not os.path.isfile(tmbpath)):
-        img = ext.get_tmb(i)
-        save_tmb(img, tmbpath)
-    else:
-        img = get_tmb(tmbpath)
+        if(not os.path.isdir(bookpath)):
+            os.mkdir(bookpath)
+        if(not os.path.isfile(tmbpath)):
+            img = ext.get_tmb(i)
+            save_tmb(img, tmbpath)
+        else:
+            img = get_tmb(tmbpath)
 
     ret = HTTPResponse(status=200, body=img)
     ret.set_header('Content-Type', 'image/jpeg')
@@ -255,7 +256,7 @@ def save_tmb(tmb, path):
         fout.flush
 
 
-def cleate_tmb_path(name):
+def create_tmb_path(name):
     return os.path.join(app.config['app.tmb_root'], os.path.basename(name))
 
 
@@ -272,7 +273,7 @@ def get_tmb(path):
 def init_config():
     """ configの初期設定を行う
     """
-    app.config.load_config("app.conf")
+    app.config.load_config('app.conf')
 
     # デバッグ設定の場合は、configを上書き
     if app.config['app.debug']:
