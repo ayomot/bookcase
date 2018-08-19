@@ -289,7 +289,7 @@ def init_config():
     app.config.load_config('app.conf')
 
     # デバッグ設定の場合は、configを上書き
-    if app.config['app.debug']:
+    if app.config['app.debug'] == 'True':
         app.config['app.book_root'] = DEFAULT_BOOK_DIR
         app.config['app.tmb_root'] = DEFAULT_TMB_DIR
 
