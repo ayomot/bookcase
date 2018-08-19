@@ -50,7 +50,7 @@ def dirlist(path):
         bpath = joinpath(path, name)
         bpath = parse.quote(bpath)
 
-        if ext == '':
+        if os.path.isdir(joinpath(path, name)):
             dirs.update({name: bpath})
         elif ext == '.zip':
             files.update({name: bpath})
