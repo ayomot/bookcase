@@ -12,6 +12,7 @@ import io
 import math
 from urllib import parse
 from contextlib import closing
+from hashlib import sha1
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CSS_DIR = os.path.join(BASE_DIR, 'static/css')
@@ -259,7 +260,7 @@ def return_tmb(path, i):
     with closing(Extractor(src)) as ext:
         book = get_bookname(path)
         bookpath = create_tmb_path(book)
-        tmbname = filename_replace(ext.get_filename(i))
+        tmbname = sha1(ext.get_filename(i).encode('utf-8')).hexdigest()
         tmbpath = os.path.join(bookpath, tmbname)
 
         if(not os.path.isdir(bookpath)):
@@ -304,25 +305,6 @@ def init_config():
     if app.config['app.debug'] == 'True':
         app.config['app.book_root'] = DEFAULT_BOOK_DIR
         app.config['app.tmb_root'] = DEFAULT_TMB_DIR
-
-
-def filename_replace(filepath):
-    """
-    ファイルパスをファイル名で使用できる形式に変換
-    例: dir1/book.jpeg => dir1_book.jpg
-
-    Parameters
-    ----------
-    filepath : str
-        ファイルパス形式の文字列
-
-    Returns
-    ----------
-    filename : str
-        ファイル名形式の文字列
-    """
-    filename = filepath.replace('_', '__').replace('/', '_')
-    return filename
 
 
 if __name__ == '__main__':
