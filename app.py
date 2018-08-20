@@ -17,6 +17,7 @@ from hashlib import sha1
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CSS_DIR = os.path.join(BASE_DIR, 'static/css')
 IMG_DIR = os.path.join(BASE_DIR, 'static/img')
+CONFIG_FILE = os.path.join(BASE_DIR, 'app.conf')
 DEFAULT_BOOK_DIR = os.path.join(BASE_DIR, 'debug/book')
 DEFAULT_TMB_DIR = os.path.join(BASE_DIR, 'debug/TMB')
 NUM_OF_TMB = 40
@@ -299,7 +300,7 @@ def get_tmb(path):
 def init_config():
     """ configの初期設定を行う
     """
-    app.config.load_config('app.conf')
+    app.config.load_config(CONFIG_FILE)
 
     # デバッグ設定の場合は、configを上書き
     if app.config['app.debug'] == 'True':
