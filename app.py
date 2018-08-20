@@ -184,7 +184,19 @@ class Extractor:
                 item
                 for item in self._zfile.namelist()
                 if self._remove(item)]
-        self._files.sort()
+
+        def formatting(filepath):
+            """
+            ファイル名が数値のみのファイルのファイル名を0埋めして返す
+            例： "path/0001.jpg", "path/0002.jpg", ...
+            """
+            path, filename = os.path.split(filepath)
+            name, ext = os.path.splitext(filename)
+            if name.isdigit():
+                return os.path.join(path, name.zfill(4) + ext)
+            return filepath
+
+        self._files.sort(key=formatting)
 
     def img_ext(self, index):
         name = self._files[index]
