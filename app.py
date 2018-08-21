@@ -13,6 +13,7 @@ import math
 from urllib import parse
 from contextlib import closing
 from hashlib import sha1
+from natsort import natsorted
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CSS_DIR = os.path.join(BASE_DIR, 'static/css')
@@ -182,23 +183,10 @@ class Extractor:
     def __init__(self, src):
         self._src = src
         self._zfile = zipfile.ZipFile(src, 'r')
-        self._files = [
-                item
-                for item in self._zfile.namelist()
-                if self._remove(item)]
-
-        def formatting(filepath):
-            """
-            ファイル名が数値のみのファイルのファイル名を0埋めして返す
-            例： "path/0001.jpg", "path/0002.jpg", ...
-            """
-            path, filename = os.path.split(filepath)
-            name, ext = os.path.splitext(filename)
-            if name.isdigit():
-                return os.path.join(path, name.zfill(4) + ext)
-            return filepath
-
-        self._files.sort(key=formatting)
+        self._files = natsorted(
+                [item
+                 for item in self._zfile.namelist()
+                 if self._remove(item)])
 
     def img_ext(self, index):
         name = self._files[index]
