@@ -186,7 +186,8 @@ class Extractor:
         self._files = natsorted(
                 [item
                  for item in self._zfile.namelist()
-                 if self._remove(item)])
+                 if self._remove(item)],
+                key=str.lower)
 
     def img_ext(self, index):
         name = self._files[index]
