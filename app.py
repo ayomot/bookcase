@@ -47,6 +47,7 @@ app.router.add_filter('book', bookpath_filter)
 
 
 @get('/')
+@get('/ls/')
 def index():
     files, dirs = dirlist(app.config['app.book_root'])
     return template('index', files=files, dirs=dirs)
@@ -64,13 +65,13 @@ def ls(path):
 
 def dirlist(path):
     # 上位ディレクトリのパスを登録しておく
-    dirs = {"..": relative_bookpath(os.path.dirname(path))}
+    dirs = {"..": parse.quote(relative_bookpath(os.path.dirname(path)))}
     files = {}
     for name in os.listdir(path):
         root, ext = os.path.splitext(name)
         bpath = os.path.join(path, name)
-        bpath = parse.quote(bpath)
         bpath = relative_bookpath(bpath)
+        bpath = parse.quote(bpath)
 
         if os.path.isdir(os.path.join(path, name)):
             dirs.update({name: bpath})
@@ -82,19 +83,16 @@ def dirlist(path):
 
 @get('/list/<path:book>/<p:int>')
 def thumbnails(path, p):
-    # path = parse.unquote(path)
-    # src = joinpath('/', path)
-    src = path
     try:
-        with closing(Extractor(src)) as ext:
+        with closing(Extractor(path)) as ext:
             lst = index_list(p, len(ext.get_filelist()))
-        page = int(math.ceil(ziplen(src) / NUM_OF_TMB))
+        page = int(math.ceil(ziplen(path) / NUM_OF_TMB))
         table = create_table(p, page)
-        path = parse.quote(src)
-        path = relative_bookpath(path)
-        base = parse.quote(os.path.dirname(src))
-        base = relative_bookpath(base)
-        return template('list', name=path, index=lst, table=table,
+        bookpath = relative_bookpath(path)
+        bookpath = parse.quote(bookpath)
+        base = relative_bookpath(os.path.dirname(path))
+        base = parse.quote(base)
+        return template('list', name=bookpath, index=lst, table=table,
                         p=p, base=base)
     except FileNotFoundError:
         return HTTPError(404, "{0} is Not Found".format(path))
@@ -102,13 +100,10 @@ def thumbnails(path, p):
 
 @get('/view/<path:book>/<index:int>')
 def view(path, index):
-    # path = parse.unquote(path)
-    # src = joinpath('/', path)
-    src = path
     try:
-        with closing(Extractor(src)) as ext:
+        with closing(Extractor(path)) as ext:
             ifile = ext.img_ext(index)
-            mvdict = move_dict(src, index, len(ext.get_filelist()))
+            mvdict = move_dict(path, index, len(ext.get_filelist()))
         return template('main', mvdict=mvdict, img=ifile)
     except FileNotFoundError:
         return HTTPError(404, "{0} is Not Found".format(path))
@@ -138,6 +133,7 @@ def add1(n, limit):
 
 
 def page_top(path, index):
+    path = relative_bookpath(path)
     path = parse.quote(path)
     page = str(int(index / NUM_OF_TMB) + 1)
     return "/list/{0}/{1}".format(path, page)
@@ -268,10 +264,7 @@ def recoad_static(filename):
 
 @route('/tmb/<path:book>/<i:int>')
 def return_tmb(path, i):
-    # path = parse.unquote(path)
-    # src = joinpath('/', path)
-    src = path
-    with closing(Extractor(src)) as ext:
+    with closing(Extractor(path)) as ext:
         book = get_bookname(path)
         bookpath = create_tmb_path(book)
         tmbname = sha1(ext.get_filename(i).encode('utf-8')).hexdigest()
