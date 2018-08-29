@@ -15,30 +15,41 @@ from contextlib import closing
 from hashlib import sha1
 from natsort import natsorted
 
+##################################
+# Initialize
+##################################
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CSS_DIR = os.path.join(BASE_DIR, 'static/css')
 IMG_DIR = os.path.join(BASE_DIR, 'static/img')
 CONFIG_FILE = os.path.join(BASE_DIR, 'app.conf')
-DEFAULT_BOOK_DIR = os.path.join(BASE_DIR, 'debug/book')
-DEFAULT_TMB_DIR = os.path.join(BASE_DIR, 'debug/TMB')
+BOOK_ROOT = os.path.join(BASE_DIR, 'debug/book')
+TMB_ROOT = os.path.join(BASE_DIR, 'debug/TMB')
 NUM_OF_TMB = 40
 TABLE_LEN = 9
 SPLIT_LEN = TABLE_LEN - 4
 app = bottle.default_app()
+
+# config設定を読み込む
+app.config.load_config(CONFIG_FILE)
+
+# デバッグ設定でない場合は、configを上書き
+if not app.config['app.debug'] == 'True':
+    BOOK_ROOT = app.config['app.book_root']
+    TMB_ROOT = app.config['app.tmb_root']
 
 
 def bookpath_filter(config):
     regexp = r'.+?'
 
     def to_python(match):
-        ret = os.path.join(app.config['app.book_root'], parse.unquote(match))
+        ret = os.path.join(BOOK_ROOT, parse.unquote(match))
 
-        if app.config['app.book_root'] not in ret:
+        if BOOK_ROOT not in ret:
             raise Exception()
         return ret
 
     def to_url(fullpath):
-        return os.path.relpath(fullpath, app.config['app.book_root'])
+        return relative_bookpath(fullpath)
 
     return regexp, to_python, to_url
 
@@ -46,10 +57,13 @@ def bookpath_filter(config):
 app.router.add_filter('book', bookpath_filter)
 
 
+##################################
+# Routing
+##################################
 @get('/')
 @get('/ls/')
 def index():
-    files, dirs = dirlist(app.config['app.book_root'])
+    files, dirs = dirlist(BOOK_ROOT)
     return template('index', files=files, dirs=dirs)
 
 
@@ -61,24 +75,6 @@ def ls(path):
     except FileNotFoundError:
         filename = os.path.basename(path)
         return HTTPError(404, "{0} is Not Found".format(filename))
-
-
-def dirlist(path):
-    # 上位ディレクトリのパスを登録しておく
-    dirs = {"..": parse.quote(relative_bookpath(os.path.dirname(path)))}
-    files = {}
-    for name in os.listdir(path):
-        root, ext = os.path.splitext(name)
-        bpath = os.path.join(path, name)
-        bpath = relative_bookpath(bpath)
-        bpath = parse.quote(bpath)
-
-        if os.path.isdir(os.path.join(path, name)):
-            dirs.update({name: bpath})
-        elif ext == '.zip':
-            files.update({name: bpath})
-
-    return files, dirs
 
 
 @get('/list/<path:book>/<p:int>')
@@ -111,25 +107,69 @@ def view(path, index):
         return HTTPError(500, "Index Is Out Of Range")
 
 
+@route('/css/<filename>')
+def static_css(filename):
+    return static_file(filename, root=CSS_DIR)
+
+
+@route('/img/<filename>')
+def static_img(filename):
+    return static_file(filename, root=IMG_DIR)
+
+
+@route('/tmb/<path:book>/<i:int>')
+def return_tmb(path, i):
+    with closing(Extractor(path)) as ext:
+        book = get_bookname(path)
+        bookpath = create_tmb_path(book)
+        tmbname = sha1(ext.get_filename(i).encode('utf-8')).hexdigest()
+        tmbpath = os.path.join(bookpath, tmbname)
+
+        if(not os.path.isdir(bookpath)):
+            os.mkdir(bookpath)
+        if(not os.path.isfile(tmbpath)):
+            img = ext.get_tmb(i)
+            save_tmb(img, tmbpath)
+        else:
+            img = get_tmb(tmbpath)
+
+    ret = HTTPResponse(status=200, body=img)
+    ret.set_header('Content-Type', 'image/jpeg')
+    return ret
+
+
+##################################
+# Logic
+##################################
+def dirlist(path):
+    # 上位ディレクトリのパスを登録しておく
+    dirs = {"..": parse.quote(relative_bookpath(os.path.dirname(path)))}
+    files = {}
+    for name in os.listdir(path):
+        root, ext = os.path.splitext(name)
+        bpath = os.path.join(path, name)
+        bpath = relative_bookpath(bpath)
+        bpath = parse.quote(bpath)
+
+        if os.path.isdir(os.path.join(path, name)):
+            dirs.update({name: bpath})
+        elif ext == '.zip':
+            files.update({name: bpath})
+
+    return files, dirs
+
+
 def move_dict(path, index, limit):
-    mvdict = {"back": sub1(index),
-              "next": add1(index, sub1(limit)),
+    def _sub1(n):
+        return 0 if n <= 0 else n - 1
+
+    def _add1(n, limit):
+        return limit if n >= limit else n + 1
+
+    mvdict = {"back": _sub1(index),
+              "next": _add1(index, _sub1(limit)),
               "pagetop": page_top(path, index)}
     return mvdict
-
-
-def sub1(n):
-    if n <= 0:
-        return 0
-    else:
-        return n - 1
-
-
-def add1(n, limit):
-    if n >= limit:
-        return limit
-    else:
-        return n + 1
 
 
 def page_top(path, index):
@@ -145,7 +185,7 @@ def ziplen(src):
 
 
 def relative_bookpath(path):
-    return os.path.relpath(path, app.config['app.book_root'])
+    return os.path.relpath(path, BOOK_ROOT)
 
 
 def create_table(index, last_page):
@@ -247,42 +287,6 @@ class Extractor:
         return jpg_img_buf.getvalue()
 
 
-@route('/css/<filename>')
-def recoad_static(filename):
-    return static_file(filename, root=CSS_DIR)
-
-
-@route('/img/<filename>')
-def recoad_static(filename):
-    return static_file(filename, root=IMG_DIR)
-
-
-@route('/tmb/<filename>')
-def recoad_static(filename):
-    return static_file(filename, root=app.config['app.tmb_root'])
-
-
-@route('/tmb/<path:book>/<i:int>')
-def return_tmb(path, i):
-    with closing(Extractor(path)) as ext:
-        book = get_bookname(path)
-        bookpath = create_tmb_path(book)
-        tmbname = sha1(ext.get_filename(i).encode('utf-8')).hexdigest()
-        tmbpath = os.path.join(bookpath, tmbname)
-
-        if(not os.path.isdir(bookpath)):
-            os.mkdir(bookpath)
-        if(not os.path.isfile(tmbpath)):
-            img = ext.get_tmb(i)
-            save_tmb(img, tmbpath)
-        else:
-            img = get_tmb(tmbpath)
-
-    ret = HTTPResponse(status=200, body=img)
-    ret.set_header('Content-Type', 'image/jpeg')
-    return ret
-
-
 def save_tmb(tmb, path):
     with open(path, "wb") as fout:
         fout.write(tmb)
@@ -290,7 +294,7 @@ def save_tmb(tmb, path):
 
 
 def create_tmb_path(name):
-    return os.path.join(app.config['app.tmb_root'], os.path.basename(name))
+    return os.path.join(TMB_ROOT, os.path.basename(name))
 
 
 def get_bookname(path):
@@ -303,17 +307,5 @@ def get_tmb(path):
         return fin.read()
 
 
-def init_config():
-    """ configの初期設定を行う
-    """
-    app.config.load_config(CONFIG_FILE)
-
-    # デバッグ設定の場合は、configを上書き
-    if app.config['app.debug'] == 'True':
-        app.config['app.book_root'] = DEFAULT_BOOK_DIR
-        app.config['app.tmb_root'] = DEFAULT_TMB_DIR
-
-
 if __name__ == '__main__':
-    init_config()
     run(app, host='localhost', port=8080, debug=True, reloader=True)
