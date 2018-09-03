@@ -49,7 +49,7 @@ def bookpath_filter(config):
         return ret
 
     def to_url(fullpath):
-        return relative_bookpath(fullpath)
+        return convert_url(fullpath)
 
     return regexp, to_python, to_url
 
@@ -81,13 +81,11 @@ def ls(path):
 def thumbnails(path, p):
     try:
         with closing(Extractor(path)) as ext:
-            lst = index_list(p, len(ext.get_filelist()))
-        page = int(math.ceil(ziplen(path) / NUM_OF_TMB))
+            lst = index_list(p, ext.length())
+            page = int(math.ceil(ext.length() / NUM_OF_TMB))
         table = create_table(p, page)
-        bookpath = relative_bookpath(path)
-        bookpath = parse.quote(bookpath)
-        base = relative_bookpath(os.path.dirname(path))
-        base = parse.quote(base)
+        bookpath = convert_url(path)
+        base = convert_url(os.path.dirname(path))
         return template('list', name=bookpath, index=lst, table=table,
                         p=p, base=base)
     except FileNotFoundError:
@@ -99,7 +97,7 @@ def view(path, index):
     try:
         with closing(Extractor(path)) as ext:
             ifile = ext.img_ext(index)
-            mvdict = move_dict(path, index, len(ext.get_filelist()))
+            mvdict = move_dict(path, index, ext.length())
         return template('main', mvdict=mvdict, img=ifile)
     except FileNotFoundError:
         return HTTPError(404, "{0} is Not Found".format(path))
@@ -143,13 +141,11 @@ def return_tmb(path, i):
 ##################################
 def dirlist(path):
     # 上位ディレクトリのパスを登録しておく
-    dirs = {"..": parse.quote(relative_bookpath(os.path.dirname(path)))}
+    dirs = {"..": convert_url(os.path.dirname(path))}
     files = {}
     for name in os.listdir(path):
         root, ext = os.path.splitext(name)
-        bpath = os.path.join(path, name)
-        bpath = relative_bookpath(bpath)
-        bpath = parse.quote(bpath)
+        bpath = convert_url(os.path.join(path, name))
 
         if os.path.isdir(os.path.join(path, name)):
             dirs.update({name: bpath})
@@ -173,19 +169,14 @@ def move_dict(path, index, limit):
 
 
 def page_top(path, index):
-    path = relative_bookpath(path)
-    path = parse.quote(path)
-    page = str(int(index / NUM_OF_TMB) + 1)
+    path = convert_url(path)
+    page = str(index // NUM_OF_TMB + 1)
     return "/list/{0}/{1}".format(path, page)
 
 
-def ziplen(src):
-    with zipfile.ZipFile(src, 'r') as zfile:
-        return len(zfile.namelist())
-
-
-def relative_bookpath(path):
-    return os.path.relpath(path, BOOK_ROOT)
+def convert_url(path):
+    relpath = os.path.relpath(path, BOOK_ROOT)
+    return parse.quote(relpath)
 
 
 def create_table(index, last_page):
@@ -262,8 +253,8 @@ class Extractor:
         name = self._files[i]
         return self._tmb_combert(self._zfile.open(name, 'r'))
 
-    def get_filelist(self):
-        return self._files
+    def length(self):
+        return len(self._files)
 
     def get_filename(self, index):
         return self._files[index]
