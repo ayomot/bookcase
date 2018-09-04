@@ -14,6 +14,7 @@ from urllib import parse
 from contextlib import closing
 from hashlib import sha1
 from natsort import natsorted
+import rarfile
 
 ##################################
 # Initialize
@@ -152,7 +153,7 @@ def dirlist(path):
 
         if os.path.isdir(os.path.join(path, name)):
             dirs.update({name: bpath})
-        elif ext == '.zip':
+        elif ext.lower() in ('.zip', '.rar'):
             files.update({name: bpath})
 
     return files, dirs
@@ -230,29 +231,35 @@ def index_list(p, limit):
     return lst
 
 
+class UnsupportedFormatError(Exception):
+    pass
+
+
 class Extractor:
     def __init__(self, src):
-        self._src = src
-        self._zfile = zipfile.ZipFile(src, 'r')
+        self._book = self._new_book(src)
         self._files = natsorted(
                 [item
-                 for item in self._zfile.namelist()
+                 for item in self._book.namelist()
                  if self._remove(item)],
                 key=str.lower)
 
     def img_ext(self, index):
         name = self._files[index]
-        img = self._zfile.read(name)
+        img = self._book.read(name)
         return self._add_scheme(img)
 
     def close(self):
-        self._zfile.close()
+        try:
+            self._book.close()
+        except AttributeError:
+            pass
 
     def get_tmb(self, i):
         if len(self._files) <= i:
             return None
         name = self._files[i]
-        return self._tmb_combert(self._zfile.open(name, 'r'))
+        return self._tmb_combert(self._book.open(name, 'r'))
 
     def length(self):
         return len(self._files)
@@ -262,7 +269,7 @@ class Extractor:
 
     def _remove(self, item):
         root, ext = os.path.splitext(item)
-        return ext in ('.png', '.jpg', '.jpeg', '.JPG')
+        return ext.lower() in ('.png', '.jpg', '.jpeg')
 
     def _add_scheme(self, img):
         img = base64.b64encode(img)
@@ -277,6 +284,13 @@ class Extractor:
         img.thumbnail((150, 150), Image.ANTIALIAS)
         img.save(jpg_img_buf, format='JPEG')
         return jpg_img_buf.getvalue()
+
+    def _new_book(self, path):
+        if zipfile.is_zipfile(path):
+            return zipfile.ZipFile(path, 'r')
+        elif rarfile.is_rarfile(path):
+            return rarfile.RarFile(path)
+        raise UnsupportedFormatError("Not suppoort this format")
 
 
 def save_tmb(tmb, path):
