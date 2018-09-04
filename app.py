@@ -73,7 +73,7 @@ def ls(path):
         files, dirs = dirlist(path)
         return template('index', files=files, dirs=dirs)
     except FileNotFoundError:
-        filename = os.path.basename(path)
+        filename = relative_bookpath(path)
         return HTTPError(404, "{0} is Not Found".format(filename))
 
 
@@ -89,7 +89,8 @@ def thumbnails(path, p):
         return template('list', name=bookpath, index=lst, table=table,
                         p=p, base=base)
     except FileNotFoundError:
-        return HTTPError(404, "{0} is Not Found".format(path))
+        filename = relative_bookpath(path)
+        return HTTPError(404, "{0} is Not Found".format(filename))
 
 
 @get('/view/<path:book>/<index:int>')
@@ -101,7 +102,8 @@ def view(path, index):
             bookpath = convert_url(path)
         return template('main', name=bookpath, mvdict=mvdict, img=ifile)
     except FileNotFoundError:
-        return HTTPError(404, "{0} is Not Found".format(path))
+        filename = relative_bookpath(path)
+        return HTTPError(404, "{0} is Not Found".format(filename))
     except IndexError:
         return HTTPError(500, "Index Is Out Of Range")
 
@@ -169,14 +171,12 @@ def move_dict(path, index, limit):
     return mvdict
 
 
-def page_top(path, index):
-    path = convert_url(path)
-    page = str(index // NUM_OF_TMB + 1)
-    return page
+def relative_bookpath(path):
+    return os.path.relpath(path, BOOK_ROOT)
 
 
 def convert_url(path):
-    relpath = os.path.relpath(path, BOOK_ROOT)
+    relpath = relative_bookpath(path)
     return parse.quote(relpath)
 
 
