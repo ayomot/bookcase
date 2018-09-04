@@ -98,7 +98,8 @@ def view(path, index):
         with closing(Extractor(path)) as ext:
             ifile = ext.img_ext(index)
             mvdict = move_dict(path, index, ext.length())
-        return template('main', mvdict=mvdict, img=ifile)
+            bookpath = convert_url(path)
+        return template('main', name=bookpath, mvdict=mvdict, img=ifile)
     except FileNotFoundError:
         return HTTPError(404, "{0} is Not Found".format(path))
     except IndexError:
@@ -164,14 +165,14 @@ def move_dict(path, index, limit):
 
     mvdict = {"back": _sub1(index),
               "next": _add1(index, _sub1(limit)),
-              "pagetop": page_top(path, index)}
+              "pagetop": index // NUM_OF_TMB + 1}
     return mvdict
 
 
 def page_top(path, index):
     path = convert_url(path)
     page = str(index // NUM_OF_TMB + 1)
-    return "/list/{0}/{1}".format(path, page)
+    return page
 
 
 def convert_url(path):
