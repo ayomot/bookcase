@@ -15,10 +15,12 @@
 	<div class="books">
 		% for name, path in sorted(files.items()):
 			<div class="list_outer">
-				 <a href="/list/{{path}}/1">
-				 <img src="/tmb/{{path}}/0">
-				 <p>{{name}}</p>
-				 </a>
+				<a href="/list/{{path}}/1">
+					<div class="tmb_inner">
+				 		<img src="/tmb/{{path}}/0">
+					</div>
+				 	<p>{{name}}</p>
+				</a>
 			</div>
 		% end
 	</div>

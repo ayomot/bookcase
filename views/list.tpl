@@ -2,9 +2,7 @@
 <div class="thumbnails">
 % for i in index:
 	<div class="tmb_outer">
-		<div class="tmb_inner">
-			<a href="/view/{{name}}/{{i}}"><img src="/tmb/{{name}}/{{i}}" class="thumbnail" ></a>
-		</div>
+	<a href="/view/{{name}}/{{i}}" class="tmb_inner"><img src="/tmb/{{name}}/{{i}}" class="thumbnail" ></a>
 	</div>
 % end
 </div>

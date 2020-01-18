@@ -91,23 +91,28 @@ header a{
 .tmb_outer{
 	float:left;
 	width: 120px;
-	height: 169px;
+	height: 150px;
 	margin-right: 10px;
 	margin-bottom: 10px;
 }
 
 .tmb_inner{
-	display: table-cell;
-	vertical-align: middle;
+	display: block;
+	background-color: black;
+	position: relative;
 	width: 120px;
-	height: 169px;
+	height: 150px;
 }
 
 .tmb_inner img{
 	display: block;
-	margin: 0 auto;
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	-webkit-transform: translate(-50%, -50%);
 	max-width: 120px;
-	max-height: 169px;
+	max-height: 150px;
 }
 
 .list_outer{
