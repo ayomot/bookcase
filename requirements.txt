@@ -1,4 +1,4 @@
-bottle==0.12.13
-natsort==5.3.3
-Pillow==6.2.0
-rarfile==3.0
+bottle==0.12.18
+natsort==7.0.1
+Pillow==7.2.0
+rarfile==3.3
