@@ -1,4 +1,4 @@
 bottle==0.12.13
 natsort==5.3.3
-Pillow==5.2.0
+Pillow==6.2.0
 rarfile==3.0
