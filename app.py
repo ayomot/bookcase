@@ -148,7 +148,7 @@ def dirlist(path):
     dirs = {"..": convert_url(os.path.dirname(path))}
     files = {}
     for name in os.listdir(path):
-        root, ext = os.path.splitext(name)
+        _, ext = os.path.splitext(name)
         bpath = convert_url(os.path.join(path, name))
 
         if os.path.isdir(os.path.join(path, name)):
@@ -241,7 +241,7 @@ class Extractor:
         self._files = natsorted(
                 [item
                  for item in self._book.namelist()
-                 if self._remove(item)],
+                 if self._is_image(item)],
                 key=str.lower)
 
     def img_ext(self, index):
@@ -267,9 +267,9 @@ class Extractor:
     def get_filename(self, index):
         return self._files[index]
 
-    def _remove(self, item):
-        root, ext = os.path.splitext(item)
-        return ext.lower() in ('.png', '.jpg', '.jpeg')
+    def _is_image(self, item):
+        _, ext = os.path.splitext(item)
+        return ext.lower() in ('.png', '.jpg', '.jpeg', '.webp')
 
     def _add_scheme(self, img):
         img = base64.b64encode(img)
@@ -304,7 +304,7 @@ def create_tmb_path(name):
 
 
 def get_bookname(path):
-    name, ext = os.path.splitext(os.path.basename(path))
+    name, _ = os.path.splitext(os.path.basename(path))
     return name
 
 
