@@ -384,8 +384,12 @@ class ThumbnailDB:
         cursor.close()
 
 
-if __name__ == '__main__':
+def startup():
     if USE_TMB_DB:
         with closing(ThumbnailDB()) as db:
             db.create_table()
+
+
+if __name__ == '__main__':
+    startup()
     run(app, host='localhost', port=8080, debug=True, reloader=True)
