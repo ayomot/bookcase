@@ -15,6 +15,7 @@ from contextlib import closing
 from hashlib import sha1
 from natsort import natsorted
 import rarfile
+import sqlite3
 
 ##################################
 # Initialize
@@ -38,6 +39,8 @@ if not app.config['app.debug'] == 'True':
     BOOK_ROOT = app.config['app.book_root']
     TMB_ROOT = app.config['app.tmb_root']
 
+USE_TMB_DB = app.config.get('app.use_tmb_db', None) == "True"
+TMB_DB_PATH = os.path.join(TMB_ROOT, 'thumbnails.db')
 
 def bookpath_filter(config):
     regexp = r'.+?'
@@ -121,6 +124,19 @@ def static_img(filename):
 
 @route('/tmb/<path:book>/<i:int>')
 def return_tmb(path, i):
+    if USE_TMB_DB:
+        img = get_tmb_from_db(path, i)
+    else:
+        img = get_tmb_from_dir(path, i)
+
+    if img:
+        ret = HTTPResponse(status=200, body=img)
+        ret.set_header('Content-Type', 'image/jpeg')
+    else:
+        ret = HTTPResponse(status=404)
+    return ret
+
+def get_tmb_from_dir(path, i):
     with closing(Extractor(path)) as ext:
         book = get_bookname(path)
         bookpath = create_tmb_path(book)
@@ -134,6 +150,22 @@ def return_tmb(path, i):
             save_tmb(img, tmbpath)
         else:
             img = get_tmb(tmbpath)
+
+    return img
+
+def get_tmb_from_db(path:str, i:int):
+    with closing(Extractor(path)) as ext:
+        book = get_bookname(path)
+        tmbname = ext.get_filename(i).encode('utf-8')
+
+        with closing(ThumbnailDB()) as db:
+            img = db.get_image(book, tmbname)
+            if img is None:
+                if img := ext.get_tmb(i):
+                    db.save_image(book, tmbname, img);
+                else:
+                    ret = HTTPResponse(status=404)
+                    return ret
 
     ret = HTTPResponse(status=200, body=img)
     ret.set_header('Content-Type', 'image/jpeg')
@@ -281,7 +313,7 @@ class Extractor:
         if img.mode != 'RGB':
             img = img.convert('RGB')
         jpg_img_buf = io.BytesIO()
-        img.thumbnail((150, 150), Image.ANTIALIAS)
+        img.thumbnail((150, 150), Image.LANCZOS)
         img.save(jpg_img_buf, format='JPEG')
         return jpg_img_buf.getvalue()
 
@@ -313,5 +345,47 @@ def get_tmb(path):
         return fin.read()
 
 
+class ThumbnailDB:
+    def __init__(self):
+        self.conn = sqlite3.connect(TMB_DB_PATH)
+
+    def get_image(self, book:str, page:str) -> bytes|None:
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT image FROM thumbnails WHERE book = ? AND page = ?",
+                       (book, page))
+
+        result = cursor.fetchone()
+        cursor.close()
+        if result:
+            return result[0]
+        return None
+
+    def save_image(self, book:str, page:str, image:bytes):
+        cursor = self.conn.cursor()
+        cursor.execute("INSERT INTO thumbnails (book, page, image) VALUES (?, ?, ?)",
+                     (book, page, image))
+        self.conn.commit()
+        cursor.close()
+
+    def close(self):
+        self.conn.close()
+
+    def create_table(self):
+        cursor = self.conn.cursor()
+        sql = '''CREATE TABLE IF NOT EXISTS thumbnails
+                       (
+                       book TEXT,
+                       page TEXT,
+                       image BLOB,
+                       UNIQUE(book, page)
+                       )'''
+        cursor.execute(sql)
+        self.conn.commit()
+        cursor.close()
+
+
 if __name__ == '__main__':
+    if USE_TMB_DB:
+        with closing(ThumbnailDB()) as db:
+            db.create_table()
     run(app, host='localhost', port=8080, debug=True, reloader=True)
