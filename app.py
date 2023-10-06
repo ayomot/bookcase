@@ -281,7 +281,7 @@ class Extractor:
         if img.mode != 'RGB':
             img = img.convert('RGB')
         jpg_img_buf = io.BytesIO()
-        img.thumbnail((150, 150), Image.ANTIALIAS)
+        img.thumbnail((150, 150), Image.LANCZOS)
         img.save(jpg_img_buf, format='JPEG')
         return jpg_img_buf.getvalue()
 
