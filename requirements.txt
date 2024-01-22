@@ -1,5 +1,5 @@
 bottle==0.12.23
 natsort==8.2.0
-Pillow==10.0.1
+Pillow==10.2.0
 rarfile==4.0
 uWSGI==2.0.22
